@@ -1,0 +1,236 @@
+url: https://matsui-lab.github.io/PhysioExperiment/
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/matsui-lab/PhysioExperiment
+
+reference:
+  - title: "Core Class"
+    desc: "PhysioExperiment object creation and manipulation"
+    contents:
+      - PhysioExperiment
+      - samplingRate
+      - defaultAssay
+      - duration
+      - extractWindow
+      - cbindPhysio
+      - rbindPhysio
+
+  - title: "Channel Management"
+    contents:
+      - channelInfo
+      - channelNames
+      - nChannels
+      - pickChannels
+      - dropChannels
+      - renameChannels
+      - setChannelTypes
+      - setChannelUnits
+      - getChannelsByType
+      - setElectrodePositions
+      - getElectrodePositions
+      - applyMontage
+
+  - title: "Events"
+    contents:
+      - PhysioEvents
+      - getEvents
+      - setEvents
+      - addEvents
+      - removeEvents
+      - nEvents
+      - eventQuery
+      - filterType
+      - filterValue
+      - resolveQuery
+
+  - title: "File I/O"
+    desc: "Read and write physiological data files"
+    contents:
+      - readPhysio
+      - writePhysio
+      - readEDF
+      - writeEDF
+      - readBDF
+      - writeBDF
+      - readBrainVision
+      - writeBrainVision
+      - readGDF
+      - writeGDF
+      - readPhysioHDF5
+      - writePhysioHDF5
+      - readBIDS
+      - writeBIDS
+      - readCSV
+      - writeCSV
+      - readMAT
+      - writeMAT
+      - readEventsCSV
+      - writeEventsCSV
+      - readElectrodePositionsCSV
+      - writeElectrodePositionsCSV
+
+  - title: "BIDS"
+    contents:
+      - listBIDSSubjects
+      - listBIDSSessions
+      - validateBIDS
+
+  - title: "Signal Filtering"
+    contents:
+      - filterSignals
+      - butterworthFilter
+      - firFilter
+      - notchFilter
+      - detrendSignal
+
+  - title: "FFT & Time-Frequency"
+    contents:
+      - fftSignals
+      - spectrogram
+      - waveletTransform
+      - bandPower
+      - hilbertTransform
+      - instantaneousAmplitude
+      - instantaneousPhase
+
+  - title: "Epoching"
+    contents:
+      - epochData
+      - epochSliding
+      - epochTimes
+      - averageEpochs
+      - grandAverage
+      - baselineCorrect
+      - rejectBadEpochs
+
+  - title: "Artifact Handling"
+    contents:
+      - detectArtifacts
+      - detectBadChannels
+      - interpolateBadChannels
+      - icaDecompose
+      - icaRemove
+      - classifyICAComponents
+
+  - title: "Re-referencing & Resampling"
+    contents:
+      - rereference
+      - getCurrentReference
+      - getReference
+      - setReference
+      - isAverageReferenced
+      - resample
+      - decimate
+      - interpolate
+
+  - title: "Connectivity"
+    contents:
+      - coherence
+      - crossSpectrum
+      - plv
+      - pli
+      - wPLI
+      - connectivityMatrix
+      - correlationMatrix
+      - slidingWindowConnectivity
+
+  - title: "Network Analysis"
+    contents:
+      - adjacencyMatrix
+      - thresholdNetwork
+      - binarizeNetwork
+      - nodeDegree
+      - clusteringCoefficient
+      - betweennessCentrality
+      - eigenvectorCentrality
+      - globalEfficiency
+      - localEfficiency
+      - pathLength
+      - smallWorldness
+      - modularity
+      - graphLaplacian
+      - spectralClustering
+      - spectralDecomposition
+      - temporalStability
+
+  - title: "Statistical Testing"
+    contents:
+      - tTestEpochs
+      - anovaEpochs
+      - clusterPermutationTest
+      - effectSize
+      - bootstrapCI
+      - correctPValues
+      - findSignificantWindows
+
+  - title: "SPM1D"
+    contents:
+      - spmTTest
+      - spmPairedTTest
+      - spmAnova
+      - plotSPM
+
+  - title: "Visualization"
+    contents:
+      - plotSignal
+      - plotMultiChannel
+      - plotPSD
+      - plotERP
+      - plotSpectrogram
+      - plotTopomap
+      - plotTopomapSeries
+      - plotNetwork
+      - plotNetworkMetrics
+      - plotNetworkStability
+      - plotAdjacencyMatrix
+      - plotDynamicConnectivity
+
+  - title: "Database"
+    contents:
+      - connectDatabase
+      - disconnectDatabase
+      - registerExperiment
+      - loadExperiment
+      - deleteExperiment
+      - queryExperiments
+      - initPhysioSchema
+      - dbStats
+
+  - title: "HDF5 Backend"
+    contents:
+      - isHDF5Backed
+      - realizeHDF5
+      - writeAssayHDF5
+
+  - title: "NA Handling"
+    contents:
+      - checkNA
+      - hasNA
+      - naSummary
+      - handleNA
+      - replaceNA
+      - fillEdgeNA
+      - cleanData
+
+  - title: "GUI"
+    contents:
+      - launchGUI
+      - startAPIServer
+      - checkGUIDependencies
+
+  - title: "Utilities"
+    contents:
+      - timeIndex
+      - samplesToTime
+      - timeToSamples
+      - assaySamplingRates
+      - setAssaySamplingRate

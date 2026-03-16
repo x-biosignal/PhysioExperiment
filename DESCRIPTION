@@ -1,0 +1,91 @@
+Package: PhysioExperiment
+Title: Unified Analysis of Physiological Signals
+Version: 1.0.0
+Authors@R:
+    person(given = "Yusuke",
+           family = "Matsui",
+           role = c("aut", "cre"),
+           email = "matsui@example.com")
+Description: A comprehensive R/Bioconductor framework for physiological signal analysis.
+    Provides a unified data model (PhysioExperiment class extending SummarizedExperiment)
+    for multi-modal sensor signals (EEG, EMG, ECG, IMU, MoCap). Includes file I/O
+    (EDF, BDF, BrainVision, GDF, HDF5, BIDS, CSV, MATLAB), database integration (DuckDB),
+    signal preprocessing (filtering, artifact removal, epoching), time-frequency analysis,
+    connectivity analysis, network metrics, statistical testing (SPM1D, permutation tests),
+    and publication-quality visualization.
+Depends:
+    R (>= 4.2)
+Imports:
+    methods,
+    SummarizedExperiment,
+    S4Vectors,
+    DelayedArray,
+    HDF5Array,
+    rhdf5,
+    DBI,
+    duckdb,
+    signal,
+    abind,
+    ggplot2,
+    jsonlite,
+    parallel,
+    Rcpp (>= 1.0.0),
+    RcppArmadillo
+Suggests:
+    R.matlab,
+    testthat (>= 3.2.0),
+    knitr,
+    rmarkdown,
+    pkgdown,
+    plumber (>= 1.2.0),
+    later,
+    callr,
+    covr
+biocViews: Software, TimeCourse, Preprocessing
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+VignetteBuilder: knitr
+LinkingTo: Rcpp, RcppArmadillo
+URL: https://github.com/matsui-lab/PhysioExperiment
+BugReports: https://github.com/matsui-lab/PhysioExperiment/issues
+Collate:
+    'PhysioExperiment-class.R'
+    'PhysioExperiment-accessors.R'
+    'PhysioExperiment-methods.R'
+    'channels.R'
+    'events.R'
+    'event-query.R'
+    'utils-signal.R'
+    'utils-na.R'
+    'io-readwrite.R'
+    'io-edf.R'
+    'io-brainvision.R'
+    'io-gdf.R'
+    'io-hdf5.R'
+    'io-bids.R'
+    'io-csv.R'
+    'io-matlab.R'
+    'db-interface.R'
+    'db-schema.R'
+    'ops-filter.R'
+    'ops-filters-advanced.R'
+    'ops-fft.R'
+    'ops-rereference.R'
+    'ops-artifact.R'
+    'ops-epoch.R'
+    'ops-epoch-sliding.R'
+    'ops-resample.R'
+    'ops-timefreq.R'
+    'ops-connectivity.R'
+    'ops-network.R'
+    'stats-tests.R'
+    'stats-spm.R'
+    'vis-plot.R'
+    'vis-multichannel.R'
+    'vis-topomap.R'
+    'vis-network.R'
+    'gui-launcher.R'
+    'RcppExports.R'
+    'zzz.R'

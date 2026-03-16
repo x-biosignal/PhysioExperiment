@@ -1,0 +1,645 @@
+---
+title: "Getting Started with PhysioExperiment"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with PhysioExperiment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## 1. Overview
+
+**PhysioExperiment** is a Bioconductor-compatible R package for analyzing
+multi-modal physiological signal data. It provides a unified data model built on
+top of `SummarizedExperiment` that can store EEG, EMG, ECG, IMU, MoCap, and
+other time-series signals alongside rich channel and event metadata.
+
+Key features include:
+
+- **Unified data model** -- the `PhysioExperiment` class wraps signal data,
+  channel metadata, event markers, and sampling rate into a single object.
+- **File I/O** -- read and write EDF/BDF, BrainVision, GDF, HDF5, BIDS, CSV,
+  and MATLAB formats.
+- **Signal processing** -- Butterworth/FIR/notch filtering, re-referencing,
+  resampling, artifact detection, and epoching.
+- **Time-frequency analysis** -- STFT spectrograms, Morlet wavelet transforms,
+  and band power extraction.
+- **Visualization** -- publication-quality plots for signals, multi-channel
+  displays, PSD, ERPs, topographic maps, and spectrograms.
+- **Statistical testing** -- pointwise t-tests, ANOVA, cluster-based
+  permutation tests, effect sizes, and multiple comparison correction.
+- **Database integration** -- DuckDB backend for efficient querying of large
+  datasets.
+- **GUI** -- a modern React-based graphical interface accessible from R.
+
+## 2. Installation
+
+Install PhysioExperiment from GitHub:
+
+```{r install}
+# Install from GitHub
+if (!requireNamespace("remotes", quietly = TRUE))
+  install.packages("remotes")
+remotes::install_github("matsui-lab/PhysioExperiment")
+```
+
+Since PhysioExperiment depends on Bioconductor packages
+(`SummarizedExperiment`, `S4Vectors`, `HDF5Array`), you may also need to
+install the Bioconductor infrastructure:
+
+```{r bioc-install}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install(c("SummarizedExperiment", "S4Vectors", "HDF5Array"))
+```
+
+## 3. Creating a PhysioExperiment
+
+### 3.1 From scratch
+
+The constructor takes an assay matrix (rows = time points, columns = channels),
+channel metadata, and a sampling rate:
+
+```{r create-basic}
+library(PhysioExperiment)
+
+# Simulate 4 seconds of 4-channel EEG at 250 Hz
+set.seed(42)
+n_time <- 1000
+n_channels <- 4
+sr <- 250
+
+eeg_data <- matrix(rnorm(n_time * n_channels), nrow = n_time, ncol = n_channels)
+colnames(eeg_data) <- c("Fz", "Cz", "Pz", "Oz")
+
+pe <- PhysioExperiment(
+  assays = list(raw = eeg_data),
+  colData = S4Vectors::DataFrame(
+    label = c("Fz", "Cz", "Pz", "Oz"),
+    type  = rep("EEG", 4),
+    unit  = rep("uV", 4)
+  ),
+  samplingRate = sr
+)
+
+pe
+```
+
+You can also supply `rowData` (per-time-point metadata) and a `metadata` list
+for experiment-level information such as reference electrode or recording date.
+
+### 3.2 From a CSV file
+
+PhysioExperiment ships with a small sample EEG dataset. Load it with `readCSV()`:
+
+```{r create-csv}
+# Locate the bundled sample file
+csv_path <- system.file("extdata", "sample_eeg.csv", package = "PhysioExperiment")
+
+# Read the wide-format CSV (time column + channel columns)
+pe <- readCSV(csv_path, time_col = "time", sampling_rate = 250)
+pe
+```
+
+Other I/O functions include `readEDF()`, `readBrainVision()`, `readGDF()`,
+`readHDF5()`, `readBIDS()`, and `readMATLAB()`.
+
+### 3.3 Adding events
+
+Events (triggers, stimuli, responses) are stored as `PhysioEvents` objects:
+
+```{r add-events}
+# Create stimulus events at 0.5 s intervals
+events <- PhysioEvents(
+  onset    = c(0.5, 1.0, 1.5),
+  duration = c(0, 0, 0),
+  type     = c("stimulus", "stimulus", "stimulus"),
+  value    = c("target", "distractor", "target")
+)
+
+pe <- setEvents(pe, events)
+getEvents(pe)
+```
+
+## 4. Exploring the Object
+
+### 4.1 Printing and dimensions
+
+Printing a `PhysioExperiment` gives a concise overview:
+
+```{r explore-print}
+pe
+
+# Dimensions: time points x channels
+dim(pe)
+
+# Signal duration in seconds
+duration(pe)
+```
+
+### 4.2 Accessing the sampling rate
+
+```{r explore-sr}
+samplingRate(pe)
+
+# Change the sampling rate (metadata only -- does not resample the data)
+samplingRate(pe) <- 500
+samplingRate(pe)
+samplingRate(pe) <- 250  # reset
+```
+
+### 4.3 Channel information
+
+```{r explore-channels}
+# Channel metadata table
+channelInfo(pe)
+
+# Channel labels
+channelNames(pe)
+
+# Number of channels
+nChannels(pe)
+
+# Per-channel summary statistics
+summary(pe)
+```
+
+### 4.4 Assay access
+
+Signal data is stored as *assays*. Each processing step typically adds a new
+assay so you can always go back to the original data:
+
+```{r explore-assays}
+# List available assays
+SummarizedExperiment::assayNames(pe)
+
+# Access the raw data matrix (time x channels)
+raw_data <- SummarizedExperiment::assay(pe, "raw")
+dim(raw_data)
+head(raw_data[, 1:2])
+```
+
+### 4.5 Subsetting
+
+PhysioExperiment supports `[i, j]` subsetting where `i` selects time points and
+`j` selects channels:
+
+```{r explore-subset}
+# First 500 time points, channels 1-2
+pe_sub <- pe[1:500, 1:2]
+dim(pe_sub)
+
+# Extract a time window in seconds
+pe_window <- extractWindow(pe, tmin = 0.5, tmax = 1.5)
+dim(pe_window)
+
+# Pick channels by name
+pe_frontal <- pickChannels(pe, c("Fz", "Cz"))
+channelNames(pe_frontal)
+
+# Drop channels
+pe_no_oz <- dropChannels(pe, "Oz")
+channelNames(pe_no_oz)
+```
+
+## 5. Signal Processing
+
+### 5.1 Butterworth filtering
+
+`butterworthFilter()` applies a zero-phase IIR filter (via `signal::filtfilt`)
+and stores the result in a new assay:
+
+```{r filter-butter}
+# Bandpass filter: keep 1-40 Hz (common for EEG)
+pe <- butterworthFilter(pe, low = 1, high = 40, type = "pass")
+
+# Lowpass filter at 30 Hz
+pe <- butterworthFilter(pe, high = 30, type = "low", output_assay = "lowpass")
+
+# Highpass filter at 0.5 Hz (remove DC drift)
+pe <- butterworthFilter(pe, low = 0.5, type = "high", output_assay = "highpass")
+
+# Check the new assays
+SummarizedExperiment::assayNames(pe)
+```
+
+### 5.2 Notch filter
+
+Remove power-line interference at 50 Hz (or 60 Hz) and its harmonics:
+
+```{r filter-notch}
+pe <- notchFilter(pe, freq = 50, harmonics = 2)
+```
+
+### 5.3 FIR filter
+
+For linear-phase filtering, use `firFilter()`:
+
+```{r filter-fir}
+pe <- firFilter(pe, low = 1, high = 40, order = 100, type = "pass",
+                output_assay = "fir_filtered")
+```
+
+### 5.4 Moving-average filter
+
+A simple smoothing filter:
+
+```{r filter-ma}
+pe <- filterSignals(pe, window = 5, output_assay = "smoothed")
+```
+
+### 5.5 Detrending
+
+Remove linear trends or the mean from each channel:
+
+```{r detrend}
+pe <- detrendSignal(pe, type = "linear", output_assay = "detrended")
+```
+
+### 5.6 Re-referencing
+
+Re-referencing changes the reference electrode for EEG data. Three modes are
+supported:
+
+```{r rereference}
+# Average reference (common for high-density EEG)
+pe_avg <- rereference(pe, ref_type = "average")
+isAverageReferenced(pe_avg)  # TRUE
+
+# Single-channel reference (e.g., Cz)
+pe_cz <- rereference(pe, ref_type = "channel", ref_channels = "Cz")
+getCurrentReference(pe_cz)  # "Cz"
+
+# Linked-mastoids reference (average of two channels)
+# pe_linked <- rereference(pe, ref_type = "channels",
+#                          ref_channels = c("M1", "M2"))
+```
+
+## 6. Epoching and Averaging
+
+Epoching segments continuous data into time-locked trials around events.
+
+### 6.1 Creating epochs
+
+```{r epoch-basic}
+# Ensure events are present
+pe <- setEvents(pe, PhysioEvents(
+  onset = c(0.5, 1.0, 1.5),
+  type  = "stimulus",
+  value = c("target", "distractor", "target")
+))
+
+# Epoch: 200 ms before to 800 ms after each stimulus
+pe_epochs <- epochData(pe, tmin = -0.2, tmax = 0.8, event_type = "stimulus")
+pe_epochs
+
+# The epoched data is now 4D: time x channel x epoch x sample
+dim(SummarizedExperiment::assay(pe_epochs, "epoched"))
+```
+
+### 6.2 Baseline correction and artifact rejection
+
+```{r epoch-advanced}
+# Epoch with baseline correction (-200 to 0 ms)
+pe_epochs_bl <- epochData(pe, tmin = -0.2, tmax = 0.8,
+                           baseline = c(-0.2, 0))
+
+# Epoch with artifact rejection (reject epochs with amplitude > 100 uV)
+pe_epochs_clean <- epochData(pe, tmin = -0.2, tmax = 0.8,
+                              baseline = c(-0.2, 0),
+                              reject = 100)
+```
+
+### 6.3 Averaging epochs
+
+Compute the event-related potential (ERP) by averaging across epochs:
+
+```{r epoch-average}
+# Average all epochs
+pe_erp <- averageEpochs(pe_epochs)
+
+# Average by condition (group by event_type column in epoch_info)
+pe_erp_cond <- averageEpochs(pe_epochs, by = "event_type")
+
+# Grand average across multiple subjects
+# pe_grand <- grandAverage(pe_erp_subj1, pe_erp_subj2, pe_erp_subj3)
+```
+
+## 7. Time-Frequency Analysis
+
+### 7.1 Spectrogram (STFT)
+
+```{r timefreq-stft}
+# Compute spectrogram for channel 1
+spec <- spectrogram(pe, channel = 1, window_size = 128, overlap = 0.75)
+
+# The result is a list with power, frequencies, and times
+names(spec)
+dim(spec$power)  # frequency x time
+range(spec$frequencies)
+
+# Plot the spectrogram
+plotSpectrogram(spec, freq_range = c(1, 50))
+```
+
+### 7.2 Wavelet transform
+
+Morlet wavelet decomposition gives better frequency resolution at low
+frequencies and better time resolution at high frequencies:
+
+```{r timefreq-wavelet}
+# Wavelet transform from 1 to 40 Hz
+wt <- waveletTransform(pe, frequencies = seq(1, 40), n_cycles = 7, channel = 1)
+
+# Access power and phase matrices (frequency x time)
+dim(wt$power)
+dim(wt$phase)
+```
+
+### 7.3 Band power
+
+Extract power in standard EEG frequency bands:
+
+```{r timefreq-bandpower}
+# Default bands: delta, theta, alpha, beta, gamma
+bp <- bandPower(pe)
+bp
+
+# Relative band power (proportions summing to 1)
+bp_rel <- bandPower(pe, relative = TRUE)
+bp_rel
+
+# Custom frequency bands
+custom_bands <- list(
+  low_alpha  = c(8, 10),
+  high_alpha = c(10, 13),
+  low_beta   = c(13, 20),
+  high_beta  = c(20, 30)
+)
+bp_custom <- bandPower(pe, bands = custom_bands)
+bp_custom
+```
+
+### 7.4 Hilbert transform
+
+Extract instantaneous amplitude (envelope) and phase:
+
+```{r timefreq-hilbert}
+# Compute the analytic signal
+pe <- hilbertTransform(pe, output_assay = "analytic")
+
+# Extract amplitude envelope
+pe <- instantaneousAmplitude(pe)
+
+# Extract instantaneous phase
+pe <- instantaneousPhase(pe)
+
+SummarizedExperiment::assayNames(pe)
+```
+
+### 7.5 FFT
+
+Compute the magnitude spectrum for all channels:
+
+```{r timefreq-fft}
+pe <- fftSignals(pe)
+SummarizedExperiment::assayNames(pe)  # now includes "fft"
+```
+
+## 8. Visualization
+
+PhysioExperiment provides several `ggplot2`-based plotting functions.
+
+### 8.1 Single-channel trace
+
+```{r vis-signal}
+# Plot channel 1 from the default (first) assay
+plotSignal(pe, channel = 1)
+
+# Plot a specific assay
+plotSignal(pe, channel = 2, assay_name = "filtered")
+```
+
+### 8.2 Multi-channel display
+
+```{r vis-multi}
+# Butterfly plot (all channels overlaid, colour-coded)
+plotMultiChannel(pe, style = "butterfly")
+
+# Stacked plot (channels offset vertically for readability)
+plotMultiChannel(pe, style = "stacked")
+
+# Select specific channels
+plotMultiChannel(pe, channels = c(1, 3), style = "butterfly")
+```
+
+### 8.3 Power spectral density
+
+```{r vis-psd}
+# PSD of all channels (up to 5 by default)
+plotPSD(pe)
+
+# Restrict frequency range and select channels
+plotPSD(pe, channels = c(1, 4), freq_range = c(1, 50))
+
+# Linear scale (default is log)
+plotPSD(pe, log_scale = FALSE, freq_range = c(0, 60))
+```
+
+### 8.4 Event-related potential (ERP)
+
+Plot the average waveform across epochs with a confidence interval:
+
+```{r vis-erp}
+# Basic ERP with 95% CI shading
+plotERP(pe_epochs, channel = 1)
+
+# Show individual epoch traces behind the average
+plotERP(pe_epochs, channel = 1, show_epochs = TRUE, epoch_alpha = 0.15)
+
+# No confidence interval
+plotERP(pe_epochs, channel = 1, ci = NULL)
+```
+
+### 8.5 Topographic map
+
+Scalp topography requires electrode positions. Use `applyMontage()` to assign
+standard 10-20 positions:
+
+```{r vis-topo}
+# Assign electrode positions from the 10-20 system
+pe <- applyMontage(pe, "10-20")
+
+# Plot topographic map at a specific time point
+plotTopomap(pe, time = 0.5)
+
+# Plot with custom values (e.g., band power or t-statistics)
+plotTopomap(pe, values = c(1.2, 0.5, -0.8, -1.5))
+
+# Series of topomaps across time
+plots <- plotTopomapSeries(pe, times = c(0.1, 0.2, 0.3, 0.4, 0.5))
+```
+
+### 8.6 Spectrogram
+
+```{r vis-spectrogram}
+spec <- spectrogram(pe, channel = 1)
+plotSpectrogram(spec, freq_range = c(1, 40))
+```
+
+## 9. Statistical Testing
+
+### 9.1 Pointwise t-test
+
+Test whether the ERP is significantly different from zero (one-sample) or
+between two conditions (two-sample) at every time point and channel:
+
+```{r stats-ttest}
+# One-sample t-test (all epochs against zero)
+res_t <- tTestEpochs(pe_epochs)
+names(res_t)
+dim(res_t$t_values)   # time x channel
+dim(res_t$p_values)   # time x channel
+
+# Two-sample t-test between condition groups
+res_t2 <- tTestEpochs(pe_epochs, condition1 = 1:5, condition2 = 6:10)
+
+# Paired t-test
+res_tp <- tTestEpochs(pe_epochs, condition1 = 1:5, condition2 = 6:10,
+                       paired = TRUE)
+```
+
+### 9.2 ANOVA
+
+One-way ANOVA across three or more conditions:
+
+```{r stats-anova}
+# Requires epoch_info metadata with a grouping column
+# Example: epochs labeled by condition "A", "B", "C"
+res_anova <- anovaEpochs(pe_epochs, groups = "event_type")
+names(res_anova)
+dim(res_anova$f_values)  # time x channel
+```
+
+### 9.3 Cluster-based permutation test
+
+Cluster permutation testing controls for multiple comparisons by identifying
+contiguous clusters of significant effects and computing cluster-level p-values
+through permutation:
+
+```{r stats-cluster}
+# Compare two conditions with 1000 permutations
+res_clust <- clusterPermutationTest(
+  pe_epochs,
+  condition1 = 1:5,
+  condition2 = 6:10,
+  n_permutations = 1000,
+  cluster_threshold = 0.05,
+  seed = 123
+)
+
+# Significant clusters
+res_clust$cluster_p
+
+# Logical mask of significant time-channel locations
+sum(res_clust$cluster_mask)
+```
+
+### 9.4 Multiple comparison correction
+
+Apply correction to any p-value matrix:
+
+```{r stats-mcc}
+# FDR (Benjamini-Hochberg) correction
+p_fdr <- correctPValues(res_t$p_values, method = "fdr")
+
+# Bonferroni correction
+p_bonf <- correctPValues(res_t$p_values, method = "bonferroni")
+
+# Holm correction
+p_holm <- correctPValues(res_t$p_values, method = "holm")
+```
+
+### 9.5 Effect size and confidence intervals
+
+```{r stats-effect}
+# Cohen's d between conditions
+d <- effectSize(pe_epochs, condition1 = 1:5, condition2 = 6:10)
+range(d$d, na.rm = TRUE)
+
+# Bootstrap confidence interval for the ERP
+boot <- bootstrapCI(pe_epochs, n_bootstrap = 1000, ci_level = 0.95, seed = 42)
+dim(boot$ci_lower)   # time x channel
+dim(boot$ci_upper)
+```
+
+### 9.6 Finding significant time windows
+
+Given a vector of p-values over time, identify contiguous intervals that reach
+significance:
+
+```{r stats-windows}
+# Extract p-values for channel 1
+p_ch1 <- res_t$p_values[, 1]
+
+# Find windows where p < 0.05
+windows <- findSignificantWindows(p_ch1, times = res_t$times, alpha = 0.05)
+windows
+```
+
+## 10. Database Integration
+
+PhysioExperiment uses DuckDB for efficient storage and querying of large
+datasets.
+
+```{r db}
+# Connect to an in-memory database
+con <- connectDatabase()
+
+# Or connect to a file-based database for persistent storage
+# con <- connectDatabase("my_experiments.duckdb")
+
+# (Future: store and query PhysioExperiment objects via the database)
+
+# Always disconnect when done
+disconnectDatabase(con)
+```
+
+## 11. Graphical User Interface
+
+PhysioExperiment includes a browser-based GUI built with React, providing
+interactive signal exploration without writing R code.
+
+```{r gui}
+# Launch the GUI in your default browser
+launchGUI()
+
+# Start on a custom port
+launchGUI(port = 3000)
+
+# Start the API server in the background (non-blocking)
+server <- startAPIServer()
+# ... do other work ...
+server$kill()
+
+# Check GUI dependencies
+checkGUIDependencies()
+```
+
+The GUI supports data import, interactive visualization, preprocessing
+pipelines, time-frequency analysis, statistical testing, and a visual workflow
+builder.
+
+## Session Information
+
+```{r session-info}
+sessionInfo()
+```
