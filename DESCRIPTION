@@ -1,0 +1,47 @@
+Package: PhysioExperiment
+Title: Unified Analysis of Physiological Signals (Meta-Package)
+Version: 1.0.0
+Authors@R:
+    person(given = "Yusuke",
+           family = "Matsui",
+           role = c("aut", "cre"),
+           email = "mail.to.matsui@gmail.com")
+Description: A meta-package for the Physio ecosystem: attaching it loads and
+    re-exports the public API of the core packages (PhysioCore data model,
+    PhysioIO file/database I/O, PhysioPreprocess signal preprocessing, and
+    PhysioAnalysis time-frequency/connectivity/network/statistics/visualization),
+    so existing code that used the former monolithic 'PhysioExperiment' package
+    keeps working. It also provides the GUI/REST launchers. Domain packages
+    (EEG, ECG, EMG, EDA, MoCap, cross-modal, MSK-Net, OpenSim, clinical) are
+    installed separately from the same ecosystem.
+Depends:
+    R (>= 4.2),
+    PhysioCore,
+    PhysioIO,
+    PhysioPreprocess,
+    PhysioAnalysis
+Imports:
+    methods,
+    utils
+Suggests:
+    jsonlite,
+    testthat (>= 3.2.0),
+    knitr,
+    rmarkdown,
+    pkgdown,
+    plumber (>= 1.2.0),
+    later,
+    callr,
+    covr
+biocViews: Software, TimeCourse, Preprocessing
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+VignetteBuilder: knitr
+URL: https://github.com/x-biosignal/PhysioExperiment, https://x-biosignal.r-universe.dev/PhysioExperiment
+BugReports: https://github.com/x-biosignal/PhysioExperiment/issues
+Collate:
+    'reexports.R'
+    'gui-launcher.R'
+    'zzz.R'

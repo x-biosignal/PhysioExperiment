@@ -1,0 +1,12 @@
+citHeader("To cite PhysioExperiment in publications use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "PhysioExperiment: Unified Analysis of Physiological Signals",
+  author   = person("Yusuke", "Matsui"),
+  year     = "2026",
+  note     = paste("R package version", meta$Version),
+  url      = "https://github.com/x-biosignal/PhysioExperiment"
+  # doi    = "10.5281/zenodo.XXXXXXX"  # add once minted
+)
+

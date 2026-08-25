@@ -1,0 +1,8 @@
+.git
+.github
+renv/library
+renv/staging
+inst/gui/node_modules
+inst/gui/dist
+physio-ecosystem
+*.Rproj.user
