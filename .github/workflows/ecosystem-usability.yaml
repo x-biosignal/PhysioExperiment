@@ -1,0 +1,65 @@
+name: ecosystem-usability
+# Usability guard: fail if a package would land on a user missing the things
+# they reach for first. Checks, per package in publishing/packages.json:
+#   - a help page answers ?<Pkg>
+#   - every @export in R/ is declared in NAMESPACE (hand-managed NAMESPACEs
+#     silently keep the old list, and the omission surfaces only when another
+#     package calls Pkg::fn())
+#   - a hand-managed Collate: lists every R file
+#   - at least 60% of help pages carry a runnable example
+#   - one vignette exists
+# Anything that cannot be satisfied honestly is recorded with a reason in
+# publishing/usability_exceptions.txt; a reasonless exemption is refused.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  usability-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: jsonlite
+
+      - name: Check in-package documentation across the ecosystem
+        run: Rscript --vanilla physio-ecosystem/publishing/check_usability.R
+
+  readme-quick-start:
+    # Does the README's quick start actually run? DOCUMENTATION_STANDARD.md
+    # requires the first example to run without network access, credentials,
+    # proprietary files or optional dependencies. This installs the ecosystem
+    # from the universe and evaluates each README's R blocks against it, with
+    # installation calls made inert so a library() call sharing a block with
+    # install.packages() still runs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            jsonlite
+            BiocManager
+
+      - name: Install the published packages from the universe
+        run: |
+          Rscript -e 'pkgs <- jsonlite::fromJSON("physio-ecosystem/publishing/packages.json")$package
+                      install.packages(pkgs, repos = c("https://x-biosignal.r-universe.dev", BiocManager::repositories()))'
+
+      - name: Run every README quick start
+        run: Rscript --vanilla physio-ecosystem/publishing/check_readme_examples.R

@@ -1,0 +1,4 @@
+marker,age_min,age_max,montage,mean,sd,unit,source
+DAR,18,64,average,0.80,0.30,ratio,Finnigan 2016 (scaffold seed)
+DAR,65,120,average,1.10,0.40,ratio,Finnigan 2016 (scaffold seed)
+BSI,18,120,average,0.050,0.020,index,van Putten 2007 (scaffold seed)

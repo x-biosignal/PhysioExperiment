@@ -1,0 +1,103 @@
+{
+  "title": "PhysioExperiment: an R ecosystem for multi-modal physiological signal analysis",
+  "description": "Umbrella record for the PhysioExperiment / x-biosignal R package ecosystem for multi-modal physiological signal analysis (EEG, EMG, ECG, EDA, MoCap, and more), with a focus on rehabilitation science.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Matsui, Yusuke",
+      "affiliation": "Nagoya University"
+    }
+  ],
+  "keywords": [
+    "physiological signals",
+    "rehabilitation",
+    "biosignal",
+    "biomechanics",
+    "R",
+    "Bioconductor"
+  ],
+  "related_identifiers": [
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioAnalysis"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioAnnotationHub"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioClinical"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioClinStats"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioCore"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioCrossModal"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioECG"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioEDA"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioEEG"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioEMG"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioIO"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioMoCap"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioMSKNet"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioOpenSim"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioPreprocess"
+    },
+    {
+      "relation": "hasPart",
+      "scheme": "url",
+      "identifier": "https://github.com/x-biosignal/PhysioReport"
+    }
+  ]
+}

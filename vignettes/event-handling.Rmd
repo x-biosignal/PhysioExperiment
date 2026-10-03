@@ -1,0 +1,289 @@
+---
+title: "Event Handling in PhysioExperiment"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Event Handling in PhysioExperiment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+Physiological experiments typically involve discrete events such as stimulus
+presentations, participant responses, and experimental condition markers.
+PhysioExperiment provides the `PhysioEvents` class and a set of functions for
+creating, querying, filtering, and modifying event information within
+`PhysioExperiment` objects.
+
+This vignette covers the event system in detail: creating events, attaching
+them to data objects, querying and filtering, and converting between time
+and sample representations.
+
+## The PhysioEvents Class
+
+`PhysioEvents` is a lightweight S4 class that stores event data as a
+`DataFrame` with four columns:
+
+- **onset**: event onset time in seconds
+- **duration**: event duration in seconds
+- **type**: event category (e.g., "stimulus", "response")
+- **value**: event label or value (e.g., "target", "hit")
+
+### Creating Events
+
+```{r create-events}
+library(PhysioExperiment)
+
+# Create events with full specification
+events <- PhysioEvents(
+  onset = c(1.0, 2.5, 4.0, 5.5, 7.0),
+  duration = c(0.5, 0.5, 0.5, 0.5, 0.5),
+  type = c("stimulus", "response", "stimulus", "response", "stimulus"),
+  value = c("target", "hit", "distractor", "false_alarm", "target")
+)
+events
+```
+
+### Default Values
+
+When creating events, only `onset` is strictly required. Other fields
+receive sensible defaults:
+
+```{r create-defaults}
+# Duration defaults to 0, type to "event", value to ""
+simple_events <- PhysioEvents(
+  onset = c(1, 2, 3, 4, 5)
+)
+simple_events
+
+# Single type is recycled across all events
+stim_events <- PhysioEvents(
+  onset = c(1, 2, 3, 4, 5),
+  type = "stimulus"
+)
+stim_events
+```
+
+### Inspecting Events
+
+```{r inspect-events}
+# Number of events
+nEvents(events)
+
+# The show method prints a summary
+events
+```
+
+## Attaching Events to PhysioExperiment
+
+Events are stored in the `metadata` slot of a `PhysioExperiment` object.
+Use `setEvents()` to attach them.
+
+```{r attach-events}
+# Create a PhysioExperiment
+pe <- PhysioExperiment(
+  assays = list(raw = matrix(rnorm(2500), nrow = 2500, ncol = 4)),
+  colData = S4Vectors::DataFrame(
+    label = c("Fz", "Cz", "Pz", "Oz"),
+    type = rep("EEG", 4)
+  ),
+  samplingRate = 250
+)
+
+# Attach events
+pe <- setEvents(pe, events)
+
+# Count events attached to the object
+nEvents(pe)
+```
+
+### Setting Events from a Data Frame
+
+You can also pass a plain `data.frame` to `setEvents()`, which will be
+automatically converted to a `PhysioEvents` object:
+
+```{r events-from-df}
+event_df <- data.frame(
+  onset = c(0.5, 1.5, 2.5),
+  duration = c(0.2, 0.2, 0.2),
+  type = c("stimulus", "stimulus", "stimulus"),
+  value = c("A", "B", "A")
+)
+
+pe <- setEvents(pe, event_df)
+getEvents(pe)
+```
+
+## Retrieving Events
+
+Use `getEvents()` to retrieve events from a `PhysioExperiment`. You can
+optionally filter by event type.
+
+```{r get-events}
+# First, set up events with mixed types
+pe <- setEvents(pe, PhysioEvents(
+  onset = c(1.0, 1.8, 2.5, 3.2, 4.0, 4.7),
+  type = c("stimulus", "response", "stimulus", "response", "stimulus", "response"),
+  value = c("target", "hit", "distractor", "correct_reject", "target", "hit")
+))
+
+# Get all events
+all_events <- getEvents(pe)
+all_events
+
+# Get only stimulus events
+stim <- getEvents(pe, type = "stimulus")
+stim
+
+# Get only response events
+resp <- getEvents(pe, type = "response")
+nEvents(resp)
+```
+
+## Adding Events
+
+Use `addEvents()` to append new events to existing ones. Events are
+automatically sorted by onset time.
+
+```{r add-events}
+# Start with stimulus events
+pe <- PhysioExperiment(
+  assays = list(raw = matrix(rnorm(2500), nrow = 2500, ncol = 4)),
+  samplingRate = 250
+)
+
+pe <- addEvents(pe, onset = c(1, 3, 5), type = "stimulus", value = "target")
+nEvents(pe)  # 3
+
+# Add response events
+pe <- addEvents(pe,
+  onset = c(1.5, 3.4),
+  type = "response",
+  value = c("hit", "hit")
+)
+nEvents(pe)  # 5
+
+# Events are sorted by onset time
+getEvents(pe)
+```
+
+## Removing Events
+
+Use `removeEvents()` to remove events by type, by index, or remove all
+events.
+
+```{r remove-events}
+# Remove all response events
+pe_stim_only <- removeEvents(pe, type = "response")
+nEvents(pe_stim_only)
+
+# Remove specific events by index
+pe_fewer <- removeEvents(pe, indices = c(1, 2))
+nEvents(pe_fewer)
+
+# Remove all events
+pe_no_events <- removeEvents(pe)
+nEvents(pe_no_events)  # 0
+```
+
+## Time and Sample Conversion
+
+PhysioExperiment provides functions to convert between time in seconds and
+sample indices, which is useful for aligning events with signal data.
+
+```{r time-conversion}
+pe <- PhysioExperiment(
+  assays = list(raw = matrix(rnorm(2500), nrow = 2500, ncol = 4)),
+  samplingRate = 250
+)
+
+# Convert times to sample indices
+sample_idx <- timeToSamples(pe, c(0.0, 1.0, 2.0))
+sample_idx  # 1, 251, 501
+
+# Convert sample indices back to times
+times <- samplesToTime(pe, c(1, 251, 501))
+times  # 0.0, 1.0, 2.0
+```
+
+## Working with Event Windows
+
+A common workflow is to extract data around events. You can combine
+event retrieval with time-based subsetting:
+
+```{r event-windows}
+# Set up experiment with events
+pe <- PhysioExperiment(
+  assays = list(raw = matrix(rnorm(25000), nrow = 25000, ncol = 4)),
+  colData = S4Vectors::DataFrame(label = c("Fz", "Cz", "Pz", "Oz")),
+  samplingRate = 250
+)
+
+pe <- addEvents(pe,
+  onset = c(10, 30, 50, 70),
+  type = "stimulus",
+  value = "target"
+)
+
+# Extract a window around the first event
+events_df <- getEvents(pe)
+first_onset <- events_df@events$onset[1]
+
+# Extract 1 second before to 2 seconds after the event
+pe_epoch <- extractWindow(pe, tmin = first_onset - 1, tmax = first_onset + 2)
+duration(pe_epoch)  # approximately 3 seconds
+```
+
+## Events and Time Concatenation
+
+When combining `PhysioExperiment` objects along the time axis using
+`rbindPhysio()`, event onsets in the second object are automatically
+offset by the duration of the first:
+
+```{r rbind-events}
+pe1 <- PhysioExperiment(
+  assays = list(raw = matrix(rnorm(1000), nrow = 1000, ncol = 4)),
+  samplingRate = 250
+)
+pe1 <- addEvents(pe1, onset = c(1, 2), type = "stimulus")
+
+pe2 <- PhysioExperiment(
+  assays = list(raw = matrix(rnorm(1000), nrow = 1000, ncol = 4)),
+  samplingRate = 250
+)
+pe2 <- addEvents(pe2, onset = c(1, 2), type = "stimulus")
+
+pe_combined <- rbindPhysio(pe1, pe2)
+
+# Events from pe2 are offset by the duration of pe1 (4 seconds)
+getEvents(pe_combined)
+```
+
+## Summary
+
+The PhysioExperiment event system provides:
+
+- **PhysioEvents()**: constructor for event objects with onset, duration,
+  type, and value fields
+- **setEvents() / getEvents()**: attach and retrieve events from
+  PhysioExperiment objects
+- **addEvents() / removeEvents()**: incrementally modify the event set
+- **nEvents()**: count events
+- **timeToSamples() / samplesToTime()**: convert between time and sample
+  representations
+
+These tools form the foundation for event-related analyses such as
+epoching and ERP computation in downstream packages.
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```

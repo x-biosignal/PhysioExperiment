@@ -1,0 +1,251 @@
+---
+title: "Getting Started with PhysioExperiment"
+author: "Yusuke Matsui"
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+vignette: >
+  %\VignetteIndexEntry{Getting Started with PhysioExperiment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+PhysioExperiment provides the `PhysioExperiment` class, a Bioconductor-compatible
+data structure for multi-modal physiological signal data. Built on top of
+`SummarizedExperiment`, it adds a sampling rate slot and convenience
+functions for channel management, event handling, and signal utilities.
+
+This vignette covers the basics of creating `PhysioExperiment` objects,
+accessing and modifying their contents, and managing channel metadata.
+
+## Creating a PhysioExperiment
+
+The `PhysioExperiment()` constructor accepts assay data (as a list of
+matrices or arrays), channel metadata via `colData`, and a sampling rate
+in Hz.
+
+```{r create-basic}
+library(PhysioExperiment)
+
+# Simulate 4 seconds of 4-channel EEG data at 250 Hz
+n_time <- 1000
+n_channels <- 4
+sr <- 250
+
+set.seed(1)
+eeg_data <- matrix(rnorm(n_time * n_channels), nrow = n_time, ncol = n_channels)
+
+pe <- PhysioExperiment(
+  assays = list(raw = eeg_data),
+  colData = S4Vectors::DataFrame(
+    label = c("Fz", "Cz", "Pz", "Oz"),
+    type = rep("EEG", n_channels)
+  ),
+  samplingRate = sr
+)
+
+pe
+```
+
+### Multiple Assays
+
+You can store multiple processing stages as separate assays. For example,
+a raw signal and a filtered version:
+
+```{r multiple-assays}
+pe_multi <- PhysioExperiment(
+  assays = list(
+    raw = eeg_data,
+    filtered = eeg_data * 0.8  # placeholder for filtered data
+  ),
+  colData = S4Vectors::DataFrame(
+    label = c("Fz", "Cz", "Pz", "Oz"),
+    type = rep("EEG", n_channels)
+  ),
+  samplingRate = sr
+)
+
+SummarizedExperiment::assayNames(pe_multi)
+```
+
+## Accessing Basic Properties
+
+### Sampling Rate
+
+```{r sampling-rate}
+# Get sampling rate
+samplingRate(pe)
+
+# Set sampling rate
+samplingRate(pe) <- 500
+samplingRate(pe)
+
+# Restore for the rest of the vignette
+samplingRate(pe) <- sr
+```
+
+### Dimensions and Duration
+
+```{r dimensions}
+# Number of time points x channels
+dim(pe)
+
+# Total number of time points
+length(pe)
+
+# Signal duration in seconds
+duration(pe)
+
+# Time vector in seconds
+head(timeIndex(pe))
+```
+
+### Default Assay
+
+The first assay is treated as the default for operations that do not
+specify an assay explicitly:
+
+```{r default-assay}
+defaultAssay(pe)
+```
+
+## Channel Management
+
+PhysioExperiment provides a rich set of functions for managing channel metadata.
+
+### Reading Channel Information
+
+```{r channel-info}
+# Full channel metadata (returns a DataFrame)
+channelInfo(pe)
+
+# Channel labels
+channelNames(pe)
+
+# Number of channels
+nChannels(pe)
+```
+
+### Setting Channel Properties
+
+```{r channel-properties}
+# Set channel types
+pe <- setChannelTypes(pe, c("EEG", "EEG", "EEG", "EEG"))
+
+# Set physical units
+pe <- setChannelUnits(pe, "uV")
+
+channelInfo(pe)
+```
+
+### Subsetting Channels
+
+```{r channel-subsetting}
+# Pick channels by name
+pe_frontal <- pickChannels(pe, c("Fz", "Cz"))
+nChannels(pe_frontal)
+
+# Pick channels by index
+pe_subset <- pickChannels(pe, c(1, 3))
+
+# Drop channels
+pe_dropped <- dropChannels(pe, "Oz")
+nChannels(pe_dropped)
+
+# Get channel indices by type
+getChannelsByType(pe, "EEG")
+```
+
+### Reference Electrode
+
+```{r reference}
+# Set the reference electrode
+pe <- setReference(pe, "average")
+getReference(pe)
+```
+
+## Subsetting and Combining
+
+### Time-based Subsetting
+
+```{r time-subsetting}
+# Extract a time window (in seconds)
+pe_window <- extractWindow(pe, tmin = 1.0, tmax = 3.0)
+duration(pe_window)
+
+# Index-based subsetting
+pe_first50 <- pe[1:50, ]
+dim(pe_first50)
+```
+
+### Combining Objects
+
+```{r combining}
+# Combine by channels (same time points required)
+pe1 <- pickChannels(pe, c(1, 2))
+pe2 <- pickChannels(pe, c(3, 4))
+pe_combined <- cbindPhysio(pe1, pe2)
+nChannels(pe_combined)
+
+# Combine by time (same channels required)
+pe_first <- pe[1:500, ]
+pe_second <- pe[501:1000, ]
+pe_concat <- rbindPhysio(pe_first, pe_second)
+length(pe_concat)
+```
+
+## Summary Statistics
+
+```{r summary}
+# Per-channel summary statistics
+summary(pe)
+
+# Convert to data.frame for further analysis
+df <- as.data.frame(pe)
+head(df)
+```
+
+## NA Handling
+
+PhysioExperiment provides utilities for checking and handling missing values:
+
+```{r na-handling}
+# Check for NA presence
+hasNA(pe)
+
+# NA summary across all assays
+naSummary(pe)
+
+# Handle NA in a numeric vector
+x <- c(1, NA, 3, NA, 5)
+handleNA(x, method = "interpolate")
+handleNA(x, method = "locf")
+
+# Fill edge NA values
+y <- c(NA, NA, 1, 2, 3, NA)
+fillEdgeNA(y, method = "extend")
+```
+
+## Next Steps
+
+- See `vignette("event-handling", package = "PhysioExperiment")` for working with
+  experimental events and triggers.
+- Explore the PhysioAnalysis, PhysioPreprocess, and PhysioIO packages for
+  signal processing, filtering, and file I/O capabilities built on
+  PhysioExperiment.
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
